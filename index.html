@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pesquisa de Imóveis em Leilão Caixa</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+        }
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb; /* Light gray border */
+        }
+        thead { /* Estilo para o cabeçalho fixo */
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #1f2937; /* Darker header background */
+            color: #ffffff;
+        }
+        th { /* Estilo para as células do cabeçalho */
+            cursor: pointer;
+        }
+        /* A cor do cabeçalho mudará ao passar o rato, conforme o comportamento padrão */
+        th.asc::after {
+            content: ' ▲';
+        }
+        th.desc::after {
+            content: ' ▼';
+        }
+        tr:nth-child(even) {
+            background-color: #f9fafb; /* Slightly darker row for zebra striping */
+        }
+        tbody tr:hover {
+            background-color: #e0f2fe; /* Light blue on hover */
+        }
+        .discount-highlight {
+            background-color: #fbcfe8; /* Light pink background */
+        }
+        .link-button {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 0.375rem;
+            background-color: #3b82f6; /* Blue background */
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .link-button:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .table-container {
+            max-height: 70vh; /* Limit height to enable scrolling */
+            overflow-y: auto;
+            overflow-x: auto; /* Adicionado para rolagem horizontal */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .simulator-section {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .simulator-section input[type="number"],
+        .simulator-section input[type="text"],
+        .simulator-section select {
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+        .simulator-section label {
+            font-weight: 500;
+            color: #4b5563;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        .simulator-result {
+            background-color: #e0f2fe;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-top: 1.5rem;
+            font-weight: 600;
+            color: #1e40af;
+            text-align: center;
+        }
+        .simulator-result.profit {
+            background-color: #d1fae5;
+            color: #065f46;
+        }
+        .simulator-result.loss {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .simulator-category-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #374151;
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+        .input-with-value {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .input-with-value input {
+            flex-grow: 1;
+        }
+        /* Estilos para a seção de autenticação */
+        .auth-section {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            margin: 4rem auto;
+            text-align: center;
+        }
+        .auth-section input {
+            margin-bottom: 1rem;
+        }
+        .auth-section button {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+        }
+        .auth-section .login-btn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .auth-section .login-btn:hover {
+            background-color: #2563eb;
+        }
+        .auth-section .logout-btn { /* Estilo para o botão de sair */
+            background-color: #ef4444;
+            color: white;
+            margin-top: 1.5rem;
+        }
+        .auth-section .logout-btn:hover {
+            background-color: #dc2626;
+        }
+        .auth-error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container">
+        <h1 class="text-4xl font-bold text-center text-gray-900 mb-2 mt-4">Pesquisa de Imóveis em Leilão Caixa</h1>
+        <p class="text-sm text-center text-gray-600 mb-8">Criado por: Claudio Isnar</p>
+        <p class="text-sm text-center text-gray-500 mb-4" id="userIdDisplay"></p>
+
+        <!-- Authentication Section -->
+        <div id="auth-section" class="auth-section">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Autenticação</h2>
+            <input type="email" id="authEmail" placeholder="Usuário" class="w-full p-2 border border-gray-300 rounded-md">
+            <input type="password" id="authPassword" placeholder="Palavra-passe" class="w-full p-2 border border-gray-300 rounded-md">
+            <p id="authErrorMessage" class="auth-error-message hidden"></p>
+            <button id="loginBtn" class="login-btn">Entrar</button>
+            <button id="logoutBtn" class="logout-btn hidden">Sair</button>
+        </div>
+
+        <div id="main-search-section" class="hidden">
+            <div class="bg-white p-8 rounded-lg shadow-xl mb-6 border border-gray-200">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">Filtros</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label for="ufFilter" class="block text-sm font-medium text-gray-700 mb-1">UF:</label>
+                        <select id="ufFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="cidadeFilter" class="block text-sm font-medium text-gray-700 mb-1">Cidade:</label>
+                        <select id="cidadeFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="bairroFilter" class="block text-sm font-medium text-gray-700 mb-1">Bairro:</label>
+                        <select id="bairroFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="modalidadeFilter" class="block text-sm font-medium text-gray-700 mb-1">Modalidade de Venda:</label>
+                        <select id="modalidadeFilter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md shadow-sm">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3">
+                    <button id="clearFiltersBtn" class="px-6 py-2 bg-red-500 text-white font-semibold rounded-md shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transition-all duration-200 ease-in-out">
+                        Limpar Filtros
+                    </button>
+                </div>
+            </div>
+
+            <div id="loading" class="hidden flex justify-center items-center py-8">
+                <div class="loading-spinner"></div>
+                <p class="ml-3 text-lg text-gray-600">Carregando dados...</p>
+            </div>
+
+            <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong class="font-bold">Erro!</strong>
+                <span class="block sm:inline" id="errorMessage">Não foi possível carregar os dados da planilha. Por favor, verifique o link ou tente novamente mais tarde.</span>
+            </div>
+
+            <div class="table-container bg-white rounded-lg">
+                <table id="dataTable" class="min-w-full divide-y divide-gray-200 hidden">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tl-lg" data-column="Link de acesso">Link de acesso</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Preço Leilão">Preço Leilão</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Valor de avaliação">Valor de avaliação</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Desconto">Desconto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="UF">UF</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Cidade">Cidade</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Bairro">Bairro</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Endereço">Endereço</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider" data-column="Descrição">Descrição</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tr-lg" data-column="Modalidade de venda">Modalidade de venda</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tr-lg">Simular Lucro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="profit-simulator-section" class="hidden simulator-section mt-8">
+            <button id="backToSearchBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md shadow-sm hover:bg-gray-300 transition-all duration-200 ease-in-out mb-6">
+                &larr; Voltar à Pesquisa
+            </button>
+            <h2 class="text-3xl font-bold text-gray-900 mb-6">Simulador de Lucro</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="col-span-full">
+                    <h3 class="simulator-category-title">Imóvel</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="valorArrematacao" class="block text-sm">Valor da Arrematação (Preço Leilão):</label>
+                            <input type="number" id="valorArrematacao" class="mt-1" value="0">
+                        </div>
+                        <div>
+                            <label for="valorVenda" class="block text-sm">Valor da Venda (Valor de Avaliação):</label>
+                            <input type="number" id="valorVenda" class="mt-1" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-full">
+                    <h3 class="simulator-category-title">Custos da Arrematação</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="comissaoLeiloeiro" class="block text-sm">Comissão do Leiloeiro (%):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="comissaoLeiloeiro" class="mt-1" value="5" step="0.1">
+                                <span id="comissaoLeiloeiroValor" class="text-sm text-gray-500">R$ 0,00</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="itbi" class="block text-sm">ITBI (%):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="itbi" class="mt-1" value="2" step="0.1">
+                                <span id="itbiValor" class="text-sm text-gray-500">R$ 0,00</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="registro" class="block text-sm">Registro (R$):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="registro" class="mt-1" value="0">
+                                <span id="registroSugestao" class="text-sm text-gray-500">Sugestão: R$ 0,00 (valor estimado, pode variar)</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="custoAdvogado" class="block text-sm">Custo Advogado (R$):</label>
+                            <input type="number" id="custoAdvogado" class="mt-1" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-full">
+                    <h3 class="simulator-category-title">Extra Pós Imissão</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="reforma" class="block text-sm">Reforma (R$):</label>
+                            <input type="number" id="reforma" class="mt-1" value="0">
+                        </div>
+                        <div>
+                            <label for="outrosExtras" class="block text-sm">Outros (R$):</label>
+                            <input type="number" id="outrosExtras" class="mt-1" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-full">
+                    <h3 class="simulator-category-title">Pós Posse</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="prazoVendaMeses" class="block text-sm">Prazo da Venda (meses):</label>
+                            <input type="number" id="prazoVendaMeses" class="mt-1" value="6">
+                        </div>
+                        <div>
+                            <label for="iptuMensal" class="block text-sm">IPTU Mensal (R$):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="iptuMensal" class="mt-1" value="0">
+                                <span id="iptuMensalValor" class="text-sm text-gray-500">R$ 0,00</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="condominioMensal" class="block text-sm">Condomínio Mensal (R$):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="condominioMensal" class="mt-1" value="0">
+                                <span id="condominioMensalValor" class="text-sm text-gray-500">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-full">
+                    <h3 class="simulator-category-title">Despesa de Venda</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="comissaoCorretor" class="block text-sm">Comissão do Corretor (%):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="comissaoCorretor" class="mt-1" value="6" step="0.1">
+                                <span id="comissaoCorretorValor" class="text-sm text-gray-500">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-span-full">
+                    <h3 class="simulator-category-title">Imposto Ganho de Capital</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="impostoGanhoCapital" class="block text-sm">Alíquota Imposto Ganho de Capital (%):</label>
+                            <div class="input-with-value">
+                                <input type="number" id="impostoGanhoCapital" class="mt-1" value="15" step="0.1">
+                                <span id="impostoGanhoCapitalValor" class="text-sm text-gray-500">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="simulator-result mt-8">
+                <p class="text-xl">Soma Total de Custos: <span id="totalCustosDisplay">R$ 0,00</span></p>
+                <p class="text-2xl mt-2">Lucro da Operação: <span id="lucroPercentualDisplay">0,00%</span> (<span id="lucroAbsolutoDisplay">R$ 0,00</span>)</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Firebase SDK Imports
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        // Firebase Configuration (using global variables provided by Canvas environment)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyAOgjx2CIhEgGUv6vHc_dy0BOmhL-MncVE",
+            authDomain: "pesquisa-leilao-c021d.firebaseapp.com",
+            projectId: "pesquisa-leilao-c021d",
+            storageBucket: "pesquisa-leilao-c021d.firebasestorage.app",
+            messagingSenderId: "871524119597",
+            appId: "1:871524119597:web:cb09a76102935adcc1b4a4"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        let userId = null;
+        const userIdDisplay = document.getElementById('userIdDisplay');
+
+        // Auth elements
+        const authSection = document.getElementById('auth-section');
+        const authEmailInput = document.getElementById('authEmail');
+        const authPasswordInput = document.getElementById('authPassword');
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const authErrorMessage = document.getElementById('authErrorMessage');
+
+        // Authenticate anonymously or with custom token
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                userId = user.uid;
+                userIdDisplay.textContent = `ID do Utilizador: ${userId}`;
+                console.log("Firebase authenticated. User ID:", userId);
+                authSection.classList.add('hidden');
+                mainSearchSection.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden'); // Show logout button
+            } else {
+                userId = null;
+                userIdDisplay.textContent = ''; // Empty the text content
+                console.log("Firebase not authenticated.");
+                authSection.classList.remove('hidden');
+                mainSearchSection.classList.add('hidden');
+                logoutBtn.classList.add('hidden'); // Hide logout button
+            }
+        });
+
+        // Event Listeners for Auth buttons
+        loginBtn.addEventListener('click', async () => {
+            const email = authEmailInput.value;
+            const password = authPasswordInput.value;
+            authErrorMessage.classList.add('hidden'); // Clear previous errors
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                console.log("User logged in successfully!");
+            } catch (error) {
+                console.error("Login failed:", error);
+                authErrorMessage.textContent = `Erro ao entrar: ${error.message}`;
+                authErrorMessage.classList.remove('hidden');
+            }
+        });
+
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                console.log("User logged out successfully!");
+            } catch (error) {
+                console.error("Logout failed:", error);
+                authErrorMessage.textContent = `Erro ao sair: ${error.message}`;
+                authErrorMessage.classList.remove('hidden');
+            }
+        });
+
+
+        // URL da sua planilha publicada no Google Sheets
+        const SPREADSHEET_ID = '1leSzi3ipMY5VaE7329_3PxcVvyg8AcvCNaoI7VicjVE';
+        const GID = '478847746';
+        const SPREADSHEET_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&gid=${GID}`;
+
+        let originalData = [];
+        let currentData = [];
+        let sortColumn = null;
+        let sortDirection = 'asc';
+
+        const loadingElement = document.getElementById('loading');
+        const errorElement = document.getElementById('error');
+        const errorMessageElement = document.getElementById('errorMessage');
+        const dataTable = document.getElementById('dataTable');
+        const tableBody = document.getElementById('tableBody');
+        const ufFilter = document.getElementById('ufFilter');
+        const cidadeFilter = document.getElementById('cidadeFilter');
+        const bairroFilter = document.getElementById('bairroFilter');
+        const modalidadeFilter = document.getElementById('modalidadeFilter');
+        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+        const mainSearchSection = document.getElementById('main-search-section');
+        const profitSimulatorSection = document.getElementById('profit-simulator-section');
+        const backToSearchBtn = document.getElementById('backToSearchBtn');
+
+        // Simulator input elements
+        const valorArrematacaoInput = document.getElementById('valorArrematacao');
+        const valorVendaInput = document.getElementById('valorVenda');
+        const comissaoLeiloeiroInput = document.getElementById('comissaoLeiloeiro');
+        const itbiInput = document.getElementById('itbi');
+        const registroInput = document.getElementById('registro');
+        const custoAdvogadoInput = document.getElementById('custoAdvogado');
+        const reformaInput = document.getElementById('reforma');
+        const outrosExtrasInput = document.getElementById('outrosExtras');
+        const prazoVendaMesesInput = document.getElementById('prazoVendaMeses');
+        const iptuMensalInput = document.getElementById('iptuMensal');
+        const condominioMensalInput = document.getElementById('condominioMensal');
+        const comissaoCorretorInput = document.getElementById('comissaoCorretor');
+        const impostoGanhoCapitalInput = document.getElementById('impostoGanhoCapital');
+
+        // Simulator output elements for specific costs
+        const comissaoLeiloeiroValorSpan = document.getElementById('comissaoLeiloeiroValor');
+        const itbiValorSpan = document.getElementById('itbiValor');
+        const comissaoCorretorValorSpan = document.getElementById('comissaoCorretorValor');
+        const iptuMensalValorSpan = document.getElementById('iptuMensalValor');
+        const condominioMensalValorSpan = document.getElementById('condominioMensalValor');
+        const impostoGanhoCapitalValorSpan = document.getElementById('impostoGanhoCapitalValor');
+        const registroSugestaoSpan = document.getElementById('registroSugestao');
+
+        const totalCustosDisplay = document.getElementById('totalCustosDisplay');
+        const lucroPercentualDisplay = document.getElementById('lucroPercentualDisplay');
+        const lucroAbsolutoDisplay = document.getElementById('lucroAbsolutoDisplay');
+
+        // Função para parsear a resposta JSON da Google Visualization API
+        function parseGoogleVizJson(jsonText) {
+            const jsonString = jsonText.substring(jsonText.indexOf('{'), jsonText.lastIndexOf('}') + 1); // Corrigido o typo aqui
+            const data = JSON.parse(jsonString);
+
+            if (!data || !data.table || !data.table.rows) {
+                console.error('Estrutura de dados inesperada da Google Visualization API:', data);
+                throw new Error('Formato de dados inesperado da planilha. Verifique se a planilha está publicada corretamente.');
+            }
+
+            const headers = data.table.cols.map(col => col.label || col.id);
+            console.log('Cabeçalhos da planilha (Google Viz API):', headers);
+
+            const parsedRows = data.table.rows.map(row => {
+                let rowObject = {};
+                headers.forEach((header, index) => {
+                    const cell = row.c[index];
+                    rowObject[header] = cell ? (cell.f !== undefined ? cell.f : cell.v) : '';
+                });
+                return rowObject;
+            });
+            return parsedRows;
+        }
+
+        // Função para formatar valores monetários e de porcentagem
+        function formatValue(column, value) {
+            if (value === undefined || value === null || value === '') {
+                return '';
+            }
+            if (column === 'Preço Leilão' || column === 'Valor de avaliação') {
+                const numValue = parseFloat(String(value).replace(/[^0-9,-]+/g, '').replace(',', '.').replace(/R\$/g, '').trim());
+                if (!isNaN(numValue)) {
+                    return numValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                }
+            } else if (column === 'Desconto') {
+                const numValue = parseFloat(String(value).replace('%', '').replace(',', '.').trim());
+                if (!isNaN(numValue)) {
+                    return `${numValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+                }
+            }
+            return value;
+        }
+
+        // Função para renderizar a tabela
+        function renderTable(data) {
+            tableBody.innerHTML = '';
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-gray-500">Nenhum imóvel encontrado com os filtros aplicados.</td></tr>`;
+                return;
+            }
+
+            const columnOrder = [
+                "Link de acesso", "Preço Leilão", "Valor de avaliação", "Desconto", "UF", "Cidade",
+                "Bairro", "Endereço", "Descrição", "Modalidade de venda"
+            ];
+
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.classList.add('transition-all', 'duration-200', 'ease-in-out');
+
+                columnOrder.forEach(header => {
+                    const td = document.createElement('td');
+                    td.classList.add('px-6', 'py-4', 'whitespace-nowrap', 'text-sm', 'text-gray-900');
+
+                    if (header === 'Link de acesso') {
+                        const link = document.createElement('a');
+                        link.href = row[header] || '#';
+                        link.target = '_blank';
+                        link.rel = 'noopener noreferrer';
+                        link.textContent = 'Acessar';
+                        link.classList.add('link-button');
+                        td.appendChild(link);
+                    } else if (header === 'Descrição') {
+                        const descriptionText = row[header] || '';
+                        td.textContent = descriptionText.length > 100 ? descriptionText.substring(0, 97) + '...' : descriptionText;
+                        td.title = descriptionText;
+                    } else if (header === 'Bairro') {
+                        const bairroText = row[header] || '';
+                        td.classList.add('max-w-xs', 'overflow-hidden', 'text-ellipsis');
+                        td.textContent = bairroText;
+                        td.title = bairroText;
+                    } else if (header === 'Desconto') {
+                        const discountValue = parseFloat(String(row[header]).replace('%', '').replace(',', '.').trim());
+                        if (!isNaN(discountValue) && discountValue < 40) {
+                            td.classList.add('discount-highlight');
+                        }
+                        td.textContent = formatValue(header, row[header]);
+                    }
+                    else {
+                        td.textContent = formatValue(header, row[header]);
+                    }
+                    tr.appendChild(td);
+                });
+
+                const simulateButtonTd = document.createElement('td');
+                const simulateButton = document.createElement('button');
+                simulateButton.textContent = 'Simular Lucro';
+                simulateButton.classList.add('px-4', 'py-2', 'bg-green-500', 'text-white', 'font-semibold', 'rounded-md', 'shadow-md', 'hover:bg-green-600', 'transition-all', 'duration-200', 'ease-in-out');
+                simulateButton.dataset.precoLeilao = parseFloat(String(row['Preço Leilão']).replace(/[^0-9,-]+/g, '').replace(',', '.'));
+                simulateButton.dataset.valorAvaliacao = parseFloat(String(row['Valor de avaliação']).replace(/[^0-9,-]+/g, '').replace(',', '.'));
+                
+                simulateButton.addEventListener('click', () => {
+                    showProfitSimulator(simulateButton.dataset.precoLeilao, simulateButton.dataset.valorAvaliacao);
+                });
+                simulateButtonTd.appendChild(simulateButton);
+                tr.appendChild(simulateButtonTd);
+
+                tableBody.appendChild(tr);
+            });
+        }
+
+        // Função para popular os filtros
+        function populateInitialFilters(data) {
+            ufFilter.innerHTML = '<option value="">Todas</option>';
+            cidadeFilter.innerHTML = '<option value="">Todas</option>';
+            bairroFilter.innerHTML = '<option value="">Todas</option>';
+            modalidadeFilter.innerHTML = '<option value="">Todas</option>';
+
+            const ufs = [...new Set(data.map(item => item.UF).filter(Boolean))].sort();
+            const modalidades = [...new Set(data.map(item => item['Modalidade de venda']).filter(Boolean))].sort();
+
+            function addOptions(selectElement, items) {
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item;
+                    option.textContent = item;
+                    selectElement.appendChild(option);
+                });
+            }
+
+            addOptions(ufFilter, ufs);
+            addOptions(modalidadeFilter, modalidades);
+
+            updateCityOptions();
+        }
+
+        // Função para atualizar as opções do filtro de Cidade
+        function updateCityOptions() {
+            const selectedUf = ufFilter.value;
+            cidadeFilter.innerHTML = '<option value="">Todas</option>';
+            
+            let cities = [];
+            if (selectedUf) {
+                cities = [...new Set(originalData.filter(item => item.UF === selectedUf).map(item => item.Cidade).filter(Boolean))].sort();
+            } else {
+                cities = [...new Set(originalData.map(item => item.Cidade).filter(Boolean))].sort();
+            }
+
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city;
+                option.textContent = city;
+                cidadeFilter.appendChild(option);
+            });
+
+            updateBairroOptions();
+            applyFilters();
+        }
+
+        // Função para atualizar as opções do filtro de Bairro
+        function updateBairroOptions() {
+            const selectedUf = ufFilter.value;
+            const selectedCidade = cidadeFilter.value;
+            bairroFilter.innerHTML = '<option value="">Todos</option>';
+
+            let neighborhoods = [];
+            if (selectedUf && selectedCidade) {
+                neighborhoods = [...new Set(originalData.filter(item => item.UF === selectedUf && item.Cidade === selectedCidade).map(item => item.Bairro).filter(Boolean))].sort();
+            } else if (selectedUf) {
+                neighborhoods = [...new Set(originalData.filter(item => item.UF === selectedUf).map(item => item.Bairro).filter(Boolean))].sort();
+            } else if (selectedCidade) {
+                neighborhoods = [...new Set(originalData.filter(item => item.Cidade === selectedCidade).map(item => item.Bairro).filter(Boolean))].sort();
+            } else {
+                neighborhoods = [...new Set(originalData.map(item => item.Bairro).filter(Boolean))].sort();
+            }
+
+            neighborhoods.forEach(bairro => {
+                const option = document.createElement('option');
+                option.value = bairro;
+                option.textContent = bairro;
+                bairroFilter.appendChild(option);
+            });
+            applyFilters();
+        }
+
+
+        // Função para aplicar filtros
+        function applyFilters() {
+            let filteredData = [...originalData];
+
+            const selectedUf = ufFilter.value;
+            const selectedCidade = cidadeFilter.value;
+            const selectedBairro = bairroFilter.value;
+            const selectedModalidade = modalidadeFilter.value;
+
+            if (selectedUf) {
+                filteredData = filteredData.filter(item => item.UF === selectedUf);
+            }
+            if (selectedCidade) {
+                filteredData = filteredData.filter(item => item.Cidade === selectedCidade);
+            }
+            if (selectedBairro) {
+                filteredData = filteredData.filter(item => item.Bairro === selectedBairro);
+            }
+            if (selectedModalidade) {
+                filteredData = filteredData.filter(item => item['Modalidade de venda'] === selectedModalidade);
+            }
+
+            currentData = filteredData;
+            applySort();
+        }
+
+        // Função para aplicar ordenação
+        function applySort() {
+            if (!sortColumn) {
+                renderTable(currentData);
+                return;
+            }
+
+            const sortedData = [...currentData].sort((a, b) => {
+                let valA = a[sortColumn];
+                let valB = b[sortColumn];
+
+                if (sortColumn === 'Preço Leilão' || sortColumn === 'Valor de avaliação') {
+                    valA = parseFloat(String(valA).replace(/[^0-9,-]+/g, '').replace(',', '.'));
+                    valB = parseFloat(String(valB).replace(/[^0-9,-]+/g, '').replace(',', '.'));
+                } else if (sortColumn === 'Desconto') {
+                    valA = parseFloat(String(valA).replace('%', '').replace(',', '.'));
+                    valB = parseFloat(String(valB).replace('%', '').replace(',', '.'));
+                }
+
+                if (valA === undefined || valA === null || isNaN(valA)) valA = '';
+                if (valB === undefined || valB === null || isNaN(valB)) valB = '';
+
+
+                if (typeof valA === 'string' && typeof valB === 'string') {
+                    return sortDirection === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                } else {
+                    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                }
+            });
+            renderTable(sortedData);
+        }
+
+        // Função para calcular o lucro
+        function calculateProfit() {
+            const valorArrematacao = parseFloat(valorArrematacaoInput.value) || 0;
+            const valorVenda = parseFloat(valorVendaInput.value) || 0;
+            const comissaoLeiloeiro = (parseFloat(comissaoLeiloeiroInput.value) || 0) / 100;
+            const itbi = (parseFloat(itbiInput.value) || 0) / 100;
+            const registro = parseFloat(registroInput.value) || 0;
+            const custoAdvogado = parseFloat(custoAdvogadoInput.value) || 0;
+            const reforma = parseFloat(reformaInput.value) || 0;
+            const outrosExtras = parseFloat(outrosExtrasInput.value) || 0;
+            const prazoVendaMeses = parseFloat(prazoVendaMesesInput.value) || 0;
+            const iptuMensal = parseFloat(iptuMensalInput.value) || 0;
+            const condominioMensal = parseFloat(condominioMensalInput.value) || 0;
+            const comissaoCorretor = (parseFloat(comissaoCorretorInput.value) || 0) / 100;
+            const impostoGanhoCapital = (parseFloat(impostoGanhoCapitalInput.value) || 0) / 100;
+
+            // Custos da Arrematação
+            const custoComissaoLeiloeiro = valorArrematacao * comissaoLeiloeiro;
+            comissaoLeiloeiroValorSpan.textContent = custoComissaoLeiloeiro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            const custoItbi = valorArrematacao * itbi;
+            itbiValorSpan.textContent = custoItbi.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Sugestão de registro
+            const suggestedRegistro = getSuggestedRegistroCost(valorArrematacao);
+            registroSugestaoSpan.textContent = `Sugestão: ${suggestedRegistro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (valor estimado, pode variar)`;
+
+            const custoAdvogadoTotal = custoAdvogado;
+
+            // Extra Pós Imissão
+            const custoReforma = reforma;
+            const custoOutrosExtras = outrosExtras;
+
+            // Pós Posse
+            const custoIptuTotal = iptuMensal * prazoVendaMeses;
+            iptuMensalValorSpan.textContent = custoIptuTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            const custoCondominioTotal = condominioMensal * prazoVendaMeses;
+            condominioMensalValorSpan.textContent = custoCondominioTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Despesa de Venda
+            const custoComissaoCorretor = valorVenda * comissaoCorretor;
+            comissaoCorretorValorSpan.textContent = custoComissaoCorretor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+            // Soma Total de Custos (antes do imposto de ganho de capital)
+            const subTotalCustos = custoComissaoLeiloeiro + custoItbi + registro + custoAdvogadoTotal +
+                                   custoReforma + custoOutrosExtras +
+                                   custoIptuTotal + custoCondominioTotal +
+                                   custoComissaoCorretor;
+
+            // Ganho de Capital (Valor de Venda - Valor de Arrematação - Custos)
+            const ganhoBruto = valorVenda - valorArrematacao - subTotalCustos;
+            let impostoSobreGanhoCapital = 0;
+            if (ganhoBruto > 0) {
+                impostoSobreGanhoCapital = ganhoBruto * impostoGanhoCapital;
+            }
+            impostoGanhoCapitalValorSpan.textContent = impostoSobreGanhoCapital.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            const totalCustos = subTotalCustos + impostoSobreGanhoCapital;
+
+            const lucroAbsoluto = valorVenda - valorArrematacao - totalCustos;
+            let lucroPercentual = 0;
+            if (valorArrematacao + totalCustos > 0) {
+                lucroPercentual = (lucroAbsoluto / (valorArrematacao + totalCustos)) * 100;
+            }
+
+            totalCustosDisplay.textContent = totalCustos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            lucroAbsolutoDisplay.textContent = lucroAbsoluto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            lucroPercentualDisplay.textContent = `${lucroPercentual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+
+            // Atualizar cor do resultado
+            lucroPercentualDisplay.parentElement.classList.remove('profit', 'loss');
+            if (lucroAbsoluto > 0) {
+                lucroPercentualDisplay.parentElement.classList.add('profit');
+            } else if (lucroAbsoluto < 0) {
+                lucroPercentualDisplay.parentElement.classList.add('loss');
+            }
+        }
+
+        // Função para sugerir custo de registro baseado no valor de arrematação (MG - Estimativa)
+        function getSuggestedRegistroCost(arrematacaoValue) {
+            if (arrematacaoValue <= 56000.00) {
+                return 1926.38;
+            } else if (arrematacaoValue <= 70000.00) {
+                return 2309.65;
+            } else if (arrematacaoValue <= 105000.00) {
+                return 2884.30;
+            } else if (arrematacaoValue <= 140000.00) {
+                return 3642.27;
+            } else if (arrematacaoValue <= 175000.00) {
+                return 3888.91;
+            } else if (arrematacaoValue <= 210000.00) {
+                return 4135.97;
+            } else if (arrematacaoValue <= 280000.00) {
+                return 4645.86;
+            } else if (arrematacaoValue <= 350000.00) {
+                return 4771.45;
+            } else if (arrematacaoValue <= 420000.00) {
+                return 4897.60;
+            } else if (arrematacaoValue <= 560000.00) {
+                return 5363.35;
+            } else if (arrematacaoValue <= 700000.00) {
+                return 5653.34;
+            } else if (arrematacaoValue <= 840000.00) {
+                return 5943.91;
+            } else if (arrematacaoValue <= 1120000.00) {
+                return 6646.67;
+            } else {
+                return 6646.67;
+            }
+        }
+
+        // Event Listeners para os filtros
+        ufFilter.addEventListener('change', updateCityOptions);
+        cidadeFilter.addEventListener('change', updateBairroOptions);
+        bairroFilter.addEventListener('change', applyFilters);
+        modalidadeFilter.addEventListener('change', applyFilters);
+
+        // Event Listener para o botão Limpar Filtros
+        clearFiltersBtn.addEventListener('click', () => {
+            ufFilter.value = '';
+            cidadeFilter.value = '';
+            bairroFilter.value = '';
+            modalidadeFilter.value = '';
+            sortColumn = null;
+            sortDirection = 'asc';
+            document.querySelectorAll('#dataTable th').forEach(th => {
+                th.classList.remove('asc', 'desc');
+            });
+            updateCityOptions();
+            applyFilters();
+        });
+
+        // Event Listener para as colunas da tabela (ordenação)
+        document.querySelectorAll('#dataTable thead th').forEach(header => {
+            header.addEventListener('click', () => {
+                const column = header.dataset.column;
+                if (column) {
+                    if (sortColumn === column) {
+                        sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortColumn = column;
+                        sortDirection = 'asc';
+                    }
+                    applySort();
+
+                    document.querySelectorAll('#dataTable thead th').forEach(th => {
+                        th.classList.remove('asc', 'desc');
+                    });
+                    header.classList.add(sortDirection);
+                }
+            });
+        });
+
+        // Event Listeners para os inputs do simulador
+        [
+            valorArrematacaoInput, valorVendaInput, comissaoLeiloeiroInput, itbiInput,
+            registroInput, custoAdvogadoInput, reformaInput, outrosExtrasInput,
+            prazoVendaMesesInput, iptuMensalInput, condominioMensalInput,
+            comissaoCorretorInput, impostoGanhoCapitalInput
+        ].forEach(input => {
+            input.addEventListener('input', calculateProfit);
+        });
+
+        // Função para mostrar o simulador e preencher dados
+        function showProfitSimulator(precoLeilao, valorAvaliacao) {
+            mainSearchSection.classList.add('hidden');
+            profitSimulatorSection.classList.remove('hidden');
+            valorArrematacaoInput.value = precoLeilao;
+            valorVendaInput.value = valorAvaliacao;
+            registroInput.value = getSuggestedRegistroCost(precoLeilao);
+            calculateProfit();
+        }
+
+        // Função para voltar à seção de pesquisa (do simulador)
+        backToSearchBtn.addEventListener('click', () => {
+            profitSimulatorSection.classList.add('hidden');
+            mainSearchSection.classList.remove('hidden');
+        });
+
+        // Função para buscar e processar os dados
+        async function fetchData() {
+            loadingElement.classList.remove('hidden');
+            errorElement.classList.add('hidden');
+            try {
+                console.log('Tentando buscar dados de:', SPREADSHEET_URL);
+                const response = await fetch(SPREADSHEET_URL);
+
+                if (!response.ok) {
+                    throw new Error(`Erro HTTP! Status: ${response.status} - ${response.statusText}. Verifique se o link da planilha está correto e se ela está publicada publicamente.`);
+                }
+
+                const rawText = await response.text();
+                console.log('Resposta bruta da API (primeiros 500 caracteres):', rawText.substring(0, 500) + '...');
+
+                originalData = parseGoogleVizJson(rawText);
+                console.log('Dados parseados:', originalData);
+
+                if (originalData.length === 0) {
+                    throw new Error('Nenhum dado válido foi encontrado na planilha após o processamento. Verifique se a planilha não está vazia ou se a estrutura das colunas está conforme o esperado.');
+                }
+
+                currentData = [...originalData];
+                populateInitialFilters(originalData);
+                applySort();
+                dataTable.classList.remove('hidden');
+            } catch (error) {
+                console.error('Erro ao buscar ou processar os dados:', error);
+                errorMessageElement.textContent = `Não foi possível carregar os dados da planilha. Detalhes: ${error.message}`;
+                errorElement.classList.remove('hidden');
+                dataTable.classList.add('hidden');
+            } finally {
+                loadingElement.classList.add('hidden');
+            }
+        }
+
+        // Carrega os dados quando a página é carregada
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
